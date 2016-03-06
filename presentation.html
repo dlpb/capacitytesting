@@ -1,0 +1,385 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.2.0/css/reveal.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.2.0/css/theme/white.css">
+    </head>
+    <body>
+        <div class="reveal">
+            <div class="slides">
+                <section>Slide 1</section>
+                <section>Slide 2</section>
+
+                <Section><h1>Motivation</h1>
+                Integration tests that use dependencies you dont control are slow.  
+                How can we reduce the time our integration tests take?
+                Clever stub management with Docker
+                </section>
+                <section>
+                <h1>Background</h1>
+<h2>Merchant Feed Service</h2>
+Customer
+eBay  
+External API
+Inventory 
+Management 
+System
+Merchant  
+Feed  
+Service
+Internal API
+Internal API
+Internal API
+Proprietary 
+Dependency
+</section>
+<section>
+    <h1>Background</h1>
+<h2>Our Goal</h2>
+Reduce the end-to-end test time
+Merchant  
+Feed  
+Service
+    </section>
+    <section>
+        <h1>Testing Nightmares</h1>
+Obtaining Data
+Red Tests
+    </section>
+    <section>
+        <h1>Dependency Nightmares</h1>
+Slow
+Unreliable
+Untested
+    </section>
+    <section>
+        <h1>Virtual Machines</h1>
+<li>
+eBay’s default way of working 
+<li>
+easy to provision (through a UI) 
+<li>
+In the “cloud” 
+<li>
+Choice of OS’s
+    </section>
+    <section>
+        <h1>Virtual Machines</h1>
+<li>
+Slow to provision internally 
+<li>
+Both API and UI 
+<li>
+We are based in London 
+<li>
+Infrastructure is in the US
+Machines can, and do, disappear 
+<li>
+Internal connection latency
+Time consuming to set up 
+<li>
+Not possible to easily automate setup 
+<li>
+e.g. db2, websphere
+(even with chef)
+    </section>
+    <section>
+        <h1>Enter Docker</h1>
+        Docker 
+noun 
+An open platform for developers 
+and sysadmins to build, ship and 
+run applications 
+
+    </section>
+    <section>
+        <h1>Enter Docker</h1>
+        <h2>Proprietary dependencies</h2>
+        Create images of dependencies 
+        Doesn't solve all setup issues 
+<li>
+But only needs to be done once
+Less storage overhead than VM  
+<li>
+db2+websphere = GBs of data
+    </section>
+      <section>
+        <h1>Vanilla Docker</h1>
+        <h2></h2>
+        Docker Images are good 
+<li>
+ But, we don’t want to run them all manually
+Vanilla Docker
+docker  
+  run   
+  -­‐p  
+  8081:8081 
+  server:1.0.0  
+  
+docker  
+  run   
+  -­‐-­‐link    
+  server:server 
+  -­‐p  
+  80:80 
+  frontend:1
+
+  Image Name & Version
+  Specify the ports
+  Link the two containers
+    </section>
+      <section>
+        <h1>Docker Compose</h1>
+        <h2>Previously Fig.sh</h2>
+         We can specify the configuration in a config file 
+<li>
+ A significant improvement over manual invocation
+server
+:   
+  
+    
+    
+  image:    
+  server:1.0.0
+    
+    
+  ports:    
+  
+    
+    
+    
+    
+  -­‐   
+  "8081:8081"   
+  
+frontend
+:   
+  
+    
+    
+  image:    
+  frontend:1.0.0
+ports:  
+  
+    
+    
+    
+    
+  -­‐   
+  "80:80"   
+  
+    
+    
+  links:    
+  
+    
+    
+    
+    
+  -­‐   
+  
+server:server
+
+Individual
+Container
+Configuration
+
+Image Name 
+and Version
+
+Specify the
+Ports
+
+Link the two 
+Containers
+    </section>
+      <section>
+        <h1>docker-java</h1>
+        <h2></h2>
+        <li>
+Works on top of the Docker API 
+<li>
+Controls the containers from code 
+<li>
+Supports a range of configuration options
+    </section>
+      <section>
+        <h1>docker-java</h1>
+        <h2></h2>
+        DockerClientConfig config = DockerClientConfig.
+createDefaultConfigBuilder
+()
+                               .withUri(
+"unix:///var/run/docker.sock"
+).build()
+;
+DockerClient client = DockerClientBuilder.
+getInstance
+(config).build()
+;
+String imageName = 
+"frontend"
+;
+List<String> envStrs = 
+new 
+ArrayList<String>()
+;
+int 
+linkCount = 
+1
+;
+Link[] containerLinks = 
+new 
+Link[linkCount]
+;
+containerLinks[
+0
+] = 
+new 
+Link(
+"server"
+, 
+"server"
+)
+;
+String id = client
+     .createContainerCmd(imageName)
+     .exec()
+     .getId()
+;
+final 
+StartContainerCmd startContainerCmd = client
+     .startContainerCmd(id)
+     .withPublishAllPorts(
+true
+)
+     .withLinks(containerLinks)
+;
+try 
+{
+   startContainerCmd.exec()
+;
+} 
+catch 
+(NotModifiedException e) {
+//swallow... this is fine!
+}
+
+Individual
+Container
+Configuration
+
+Image Name 
+
+Specify the
+Ports
+
+Link the
+Containers
+    </section>
+      <section>
+        <h1>Docker Compose</h1>
+        <h2></h2>
+        <li>
+Good middle ground 
+<li>
+Can be run from Jenkins, or code with exec 
+<li>
+Perfect for setting up environments 
+<li>
+Cost is low 
+<li>
+Benefit is high
+    </section>
+      <section>
+        <h1>The Desired Outcome</h1>
+        <h2></h2>
+        Reduce the time it takes to run our end 
+to end tests against our system
+    </section>
+      <section>
+        <h1>Isolation is good</h1>
+        <h2>Focus of
+Testing</h2>
+Merchant  
+Feed  
+Service
+    </section>
+      <section>
+        <h1>Isolation is good</h1>
+        <h2></h2>
+        Merchant  
+Feed  
+Service
+Internal API
+<li>
+Across the 
+Atlantic
+High Latency
+    </section>
+      <section>
+        <h1>Isolation is good</h1>
+        <h2></h2>
+        Merchant  
+Feed  
+Service
+
+eBay  
+External API
+
+Proprietary 
+Dependency
+
+Needs to run locally
+
+GB’s of install
+
+Hard to install
+    </section>
+      <section>
+        <h1>Capacity Testing</h1>
+        <h2></h2>
+        <li>
+A suite of tests for each resource 
+<li>
+Proprietary dependencies are put in containers, 
+not VMs 
+<li>
+Internal Dependencies are stubs in containers 
+<li>
+Explicit control of input and output 
+<li>
+Fixed Contract 
+<li>
+As fast as we need them to be
+    </section>
+      <section>
+        <h1>The Effect</h1>
+        <h2></h2>
+        We cut our end to end testing time 
+        120 minutes -> 10 minutes
+    </section>
+      <section>
+        <h1>Isolation is good</h1>
+        <h2></h2>
+        example of graph
+    </section>
+      <section>
+        <h1>Summary</h1>
+        <h2></h2>
+        Stubs cut our end to end test time 
+<li>
+Docker allows us to easily replace dependencies 
+for test scenarios 
+<li>
+Stubs fixed our contract with external 
+dependencies
+    </section>
+      
+            </div>
+        </div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.2.0/js/reveal.min.js"></script>
+        <script>
+            Reveal.initialize();
+        </script>
+    </body>
+</html>
